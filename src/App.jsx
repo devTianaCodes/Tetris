@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 const ROWS = 20;
 const COLS = 10;
-const DROP_INTERVAL = 500;
+const BASE_DROP_INTERVAL = 500;
+const MIN_DROP_INTERVAL = 100;
+const LINES_PER_LEVEL = 10;
 
 const TETROMINOES = [
   {
@@ -145,15 +147,28 @@ const clearLines = (board) => {
   };
 };
 
+const createPieceFromTemplate = (template) => ({
+  id: template.id,
+  color: template.color,
+  shape: template.shape.map((row) => [...row]),
+  x: Math.floor((COLS - 4) / 2),
+  y: -1,
+});
+
 const randomPiece = () => {
   const template = TETROMINOES[Math.floor(Math.random() * TETROMINOES.length)];
   return {
-    id: template.id,
-    color: template.color,
-    shape: template.shape.map((row) => [...row]),
-    x: Math.floor((COLS - 4) / 2),
-    y: -1,
+    ...createPieceFromTemplate(template),
   };
+};
+
+const shuffle = (items) => {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
 };
 
 export default function App() {
@@ -161,7 +176,11 @@ export default function App() {
   const [active, setActive] = useState(() => randomPiece());
   const [status, setStatus] = useState("idle");
   const [score, setScore] = useState(0);
+  const [lines, setLines] = useState(0);
+  const [level, setLevel] = useState(0);
+  const [highScore, setHighScore] = useState(0);
   const intervalRef = useRef(null);
+  const bagRef = useRef([]);
 
   const ghostPiece = useMemo(() => {
     if (!active) return null;
@@ -177,16 +196,31 @@ export default function App() {
     return mergePiece(board, active);
   }, [board, active]);
 
+  const refillBag = () => {
+    bagRef.current = shuffle(TETROMINOES);
+  };
+
+  const drawFromBag = () => {
+    if (bagRef.current.length === 0) {
+      refillBag();
+    }
+    const template = bagRef.current.pop();
+    return createPieceFromTemplate(template);
+  };
+
   const startGame = () => {
     const freshBoard = emptyBoard();
-    const nextPiece = randomPiece();
+    refillBag();
+    const firstPiece = drawFromBag();
     setBoard(freshBoard);
     setScore(0);
-    if (!canPlace(freshBoard, nextPiece.shape, nextPiece.x, nextPiece.y)) {
+    setLines(0);
+    setLevel(0);
+    if (!canPlace(freshBoard, firstPiece.shape, firstPiece.x, firstPiece.y)) {
       setStatus("gameover");
       return;
     }
-    setActive(nextPiece);
+    setActive(firstPiece);
     setStatus("running");
   };
 
@@ -199,15 +233,22 @@ export default function App() {
     const { board: clearedBoard, cleared } = clearLines(lockedBoard);
     setBoard(clearedBoard);
     if (cleared > 0) {
-      setScore((prev) => prev + SCORE_TABLE[cleared]);
+      setScore((prev) => prev + SCORE_TABLE[cleared] * (level + 1));
+    }
+    if (cleared > 0) {
+      setLines((prev) => {
+        const total = prev + cleared;
+        setLevel(Math.floor(total / LINES_PER_LEVEL));
+        return total;
+      });
     }
 
-    const nextPiece = randomPiece();
-    if (!canPlace(clearedBoard, nextPiece.shape, nextPiece.x, nextPiece.y)) {
+    const upcoming = drawFromBag();
+    if (!canPlace(clearedBoard, upcoming.shape, upcoming.x, upcoming.y)) {
       setStatus("gameover");
       return;
     }
-    setActive(nextPiece);
+    setActive(upcoming);
   };
 
   const stepDown = () => {
@@ -249,16 +290,25 @@ export default function App() {
     while (canPlace(board, active.shape, active.x, nextY + 1)) {
       nextY += 1;
     }
+    const dropDistance = Math.max(0, nextY - active.y);
+    if (dropDistance > 0) {
+      setScore((prev) => prev + dropDistance * 2);
+    }
     const landed = { ...active, y: nextY };
     setActive(landed);
     lockAndSpawn(landed);
   };
 
+  const dropInterval = Math.max(
+    MIN_DROP_INTERVAL,
+    BASE_DROP_INTERVAL - level * 35
+  );
+
   useEffect(() => {
     if (status !== "running") return;
-    intervalRef.current = setInterval(stepDown, DROP_INTERVAL);
+    intervalRef.current = setInterval(stepDown, dropInterval);
     return () => clearInterval(intervalRef.current);
-  }, [status, active, board]);
+  }, [status, active, board, dropInterval]);
 
   useEffect(() => {
     const handleKey = (event) => {
@@ -276,6 +326,9 @@ export default function App() {
           moveHorizontally(1);
           break;
         case "ArrowDown":
+          if (status === "running") {
+            setScore((prev) => prev + 1);
+          }
           stepDown();
           break;
         case "ArrowUp":
@@ -296,6 +349,21 @@ export default function App() {
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [status, active, board]);
+  
+  useEffect(() => {
+    const stored = window.localStorage.getItem("tetris_high_score");
+    if (stored) {
+      const value = Number(stored);
+      if (!Number.isNaN(value)) setHighScore(value);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (score > highScore) {
+      setHighScore(score);
+      window.localStorage.setItem("tetris_high_score", String(score));
+    }
+  }, [score, highScore]);
 
   const statusLabel =
     status === "running"
@@ -390,6 +458,32 @@ export default function App() {
                 );
               })
             )}
+          </div>
+        </div>
+
+        <div className="w-full max-w-xs space-y-4">
+          <div className="rounded-2xl border border-violet-400/60 bg-board-800 p-4">
+            <p className="text-xs uppercase tracking-widest text-slate-400">Stats</p>
+            <div className="mt-3 grid grid-cols-2 gap-3 text-sm text-slate-200">
+              <div>
+                <p className="text-xs uppercase tracking-widest text-slate-400">Level</p>
+                <p className="mt-1 font-display text-2xl text-white">{level}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-widest text-slate-400">Lines</p>
+                <p className="mt-1 font-display text-2xl text-white">{lines}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-widest text-slate-400">High</p>
+                <p className="mt-1 font-display text-2xl text-white">{highScore}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-widest text-slate-400">Speed</p>
+                <p className="mt-1 font-display text-2xl text-white">
+                  {Math.round(1000 / dropInterval)}x
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
