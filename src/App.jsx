@@ -180,7 +180,11 @@ export default function App() {
   const [lines, setLines] = useState(0);
   const [level, setLevel] = useState(0);
   const [highScore, setHighScore] = useState(0);
+  const [showHelp, setShowHelp] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
+  const [flashingRows, setFlashingRows] = useState([]);
   const intervalRef = useRef(null);
+  const clearTimeoutRef = useRef(null);
   const bagRef = useRef([]);
 
   const ghostPiece = useMemo(() => {
@@ -233,31 +237,56 @@ export default function App() {
 
   const lockAndSpawn = (piece) => {
     const lockedBoard = mergePiece(board, piece);
-    const { board: clearedBoard, cleared } = clearLines(lockedBoard);
-    setBoard(clearedBoard);
-    if (cleared > 0) {
-      setScore((prev) => prev + SCORE_TABLE[cleared] * (level + 1));
-    }
-    if (cleared > 0) {
-      setLines((prev) => {
-        const total = prev + cleared;
-        setLevel(Math.floor(total / LINES_PER_LEVEL));
-        return total;
-      });
-    }
+    const fullRows = lockedBoard
+      .map((row, index) => (row.every((cell) => cell !== 0) ? index : -1))
+      .filter((index) => index !== -1);
 
-    const upcoming = nextPiece ?? drawFromBag();
-    const newNext = drawFromBag();
-    if (!canPlace(clearedBoard, upcoming.shape, upcoming.x, upcoming.y)) {
-      setStatus("gameover");
+    setBoard(lockedBoard);
+    setActive(null);
+
+    if (fullRows.length === 0) {
+      const upcoming = nextPiece ?? drawFromBag();
+      const newNext = drawFromBag();
+      if (!canPlace(lockedBoard, upcoming.shape, upcoming.x, upcoming.y)) {
+        setStatus("gameover");
+        return;
+      }
+      setActive(upcoming);
+      setNextPiece(newNext);
       return;
     }
-    setActive(upcoming);
-    setNextPiece(newNext);
+
+    setIsClearing(true);
+    setFlashingRows(fullRows);
+
+    clearTimeoutRef.current = setTimeout(() => {
+      const { board: clearedBoard, cleared } = clearLines(lockedBoard);
+      setBoard(clearedBoard);
+      setFlashingRows([]);
+      setIsClearing(false);
+      if (cleared > 0) {
+        setScore((prev) => prev + SCORE_TABLE[cleared] * (level + 1));
+        setLines((prev) => {
+          const total = prev + cleared;
+          setLevel(Math.floor(total / LINES_PER_LEVEL));
+          return total;
+        });
+      }
+
+      const upcoming = nextPiece ?? drawFromBag();
+      const newNext = drawFromBag();
+      if (!canPlace(clearedBoard, upcoming.shape, upcoming.x, upcoming.y)) {
+        setStatus("gameover");
+        return;
+      }
+      setActive(upcoming);
+      setNextPiece(newNext);
+    }, 550);
   };
 
   const stepDown = () => {
     if (!active) return;
+    if (isClearing) return;
     if (canPlace(board, active.shape, active.x, active.y + 1)) {
       setActive((prev) => ({ ...prev, y: prev.y + 1 }));
       return;
@@ -319,6 +348,7 @@ export default function App() {
     const handleKey = (event) => {
       if (status === "idle") return;
       if (status === "gameover") return;
+      if (isClearing) return;
       if (status === "paused") {
         if (event.code === "KeyP") togglePause();
         return;
@@ -353,7 +383,15 @@ export default function App() {
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [status, active, board]);
+  }, [status, active, board, isClearing]);
+
+  useEffect(() => {
+    return () => {
+      if (clearTimeoutRef.current) {
+        clearTimeout(clearTimeoutRef.current);
+      }
+    };
+  }, []);
   
   useEffect(() => {
     const stored = window.localStorage.getItem("tetris_high_score");
@@ -435,12 +473,12 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-r from-[#0a0014] via-[#2a0650] to-[#0a0014] px-4 py-10 text-slate-100">
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 lg:flex-row lg:items-start">
-        <div className="flex-1 text-center">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 md:flex-row md:items-start">
+        <div className="order-1 flex-1 text-center pt-4 md:pt-[50px]">
           <h1 className="text-4xl uppercase tracking-wide text-orange-400">Brick Drop</h1>
           <p className="mt-4 text-sm text-slate-300">
             <span className="block pb-6">Classic Tetris</span>
-            <span className="block pb-10 pt-10">
+            <span className="hidden pb-10 pt-10 lg:block">
               Use arrows to move,
               <br />
               Up or X to rotate,
@@ -450,6 +488,26 @@ export default function App() {
               and P to pause.
             </span>
           </p>
+
+          <button
+            type="button"
+            onClick={() => setShowHelp((prev) => !prev)}
+            className="mt-4 inline-flex items-center justify-center rounded-full border border-violet-400 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-orange-400 transition hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-400/20 hover:text-orange-300 lg:hidden"
+          >
+            {showHelp ? "Hide Controls" : "Show Controls"}
+          </button>
+
+          {showHelp ? (
+            <p className="mt-4 text-sm text-slate-300 lg:hidden">
+              Use arrows to move,
+              <br />
+              Up or X to rotate,
+              <br />
+              Space for hard drop,
+              <br />
+              and P to pause.
+            </p>
+          ) : null}
 
           <div className="mt-8 text-xs uppercase tracking-widest text-slate-300">
             Status:{" "}
@@ -466,7 +524,7 @@ export default function App() {
             <button
               type="button"
               onClick={startGame}
-              className={`rounded-full border border-violet-400 bg-orange-400 px-5 py-2 text-xs font-semibold uppercase tracking-widest transition hover:-translate-y-0.5 hover:bg-orange-300 ${
+              className={`min-w-[140px] rounded-full border border-violet-400 bg-orange-400 px-5 py-2 text-xs font-semibold uppercase tracking-widest transition hover:-translate-y-0.5 hover:bg-orange-300 ${
                 status === "gameover" ? "text-[#0a0014]" : "text-slate-950"
               }`}
             >
@@ -475,7 +533,7 @@ export default function App() {
             <button
               type="button"
               onClick={togglePause}
-              className="rounded-full border border-violet-400 px-5 py-2 text-xs font-semibold uppercase tracking-widest text-orange-400 transition hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-400/20 hover:text-orange-300"
+              className="min-w-[140px] rounded-full border border-violet-400 px-5 py-2 text-xs font-semibold uppercase tracking-widest text-orange-400 transition hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-400/20 hover:text-orange-300"
               disabled={status !== "running" && status !== "paused"}
             >
               {status === "paused" ? "Resume" : "Pause"}
@@ -483,19 +541,22 @@ export default function App() {
           </div>
         </div>
 
-        <div className="flex flex-1 flex-col items-center gap-4">
+        <div className="order-3 flex flex-1 flex-col items-center gap-4 md:order-2 md:flex-none">
           <div
-            className="grid gap-1 rounded-2xl border border-violet-400 bg-board-900 p-2 shadow-2xl"
+            className="grid gap-1 rounded-2xl border border-violet-400 bg-board-900 p-2 shadow-2xl overflow-visible shrink-0"
             style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))` }}
           >
             {displayBoard.map((row, rowIndex) =>
               row.map((cell, colIndex) => {
                 const isGhost =
                   cell === 0 && ghostCells.has(`${rowIndex}-${colIndex}`);
+                const isFlashing = flashingRows.includes(rowIndex) && cell !== 0;
                 return (
                   <div
                     key={`${rowIndex}-${colIndex}`}
-                    className={`h-7 w-7 rounded-sm border border-orange-400/70 ${CELL_COLORS[cell]}`}
+                    className={`relative h-7 w-7 rounded-sm border border-orange-400/70 ${
+                      CELL_COLORS[cell]
+                    } ${isFlashing ? "animate-pulse brightness-200" : ""}`}
                   >
                     {isGhost ? (
                       <div className="h-full w-full rounded-sm border border-white/40 bg-white/10" />
@@ -507,8 +568,8 @@ export default function App() {
           </div>
         </div>
 
-        <div className="w-full max-w-xs space-y-4">
-          <div className="rounded-2xl border border-violet-400 bg-board-800 p-4 flex flex-col items-center">
+        <div className="order-2 mx-auto flex w-full max-w-none flex-row gap-4 pt-4 md:order-3 md:ml-5 md:mx-0 md:max-w-xs md:flex-col md:gap-4 md:pt-[50px]">
+          <div className="w-1/2 rounded-2xl border border-violet-400 bg-board-800 p-3 flex flex-col items-center md:w-auto md:p-4">
             <p className="text-xs uppercase tracking-widest text-slate-400">Next</p>
             <div
               className="mt-4 inline-grid gap-1 rounded-xl bg-board-900 p-2 mb-5"
@@ -545,7 +606,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-violet-400 bg-board-800 p-4 text-center">
+          <div className="w-1/2 rounded-2xl border border-violet-400 bg-board-800 p-3 text-center md:w-auto md:p-4">
             <p className="text-xs uppercase tracking-widest text-slate-400">
               <span className="block pb-6">Stats</span>
             </p>
