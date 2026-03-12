@@ -10,7 +10,7 @@ const TETROMINOES = [
   {
     id: 1,
     name: "I",
-    color: "rgb(78, 8, 175)",
+    color: "bg-cyan-400",
     shape: [
       [0, 0, 0, 0],
       [1, 1, 1, 1],
@@ -21,7 +21,7 @@ const TETROMINOES = [
   {
     id: 2,
     name: "O",
-    color: "rgb(175, 12, 88)",
+    color: "bg-yellow-400",
     shape: [
       [0, 1, 1, 0],
       [0, 1, 1, 0],
@@ -32,7 +32,7 @@ const TETROMINOES = [
   {
     id: 3,
     name: "T",
-    color: "#22d3ee",
+    color: "bg-purple-400",
     shape: [
       [0, 1, 0, 0],
       [1, 1, 1, 0],
@@ -43,7 +43,7 @@ const TETROMINOES = [
   {
     id: 4,
     name: "S",
-    color: "#22c55e",
+    color: "bg-emerald-400",
     shape: [
       [0, 1, 1, 0],
       [1, 1, 0, 0],
@@ -54,7 +54,7 @@ const TETROMINOES = [
   {
     id: 5,
     name: "Z",
-    color: "#facc15",
+    color: "bg-red-400",
     shape: [
       [1, 1, 0, 0],
       [0, 1, 1, 0],
@@ -65,7 +65,7 @@ const TETROMINOES = [
   {
     id: 6,
     name: "J",
-    color: "#3b82f6",
+    color: "bg-blue-400",
     shape: [
       [1, 0, 0, 0],
       [1, 1, 1, 0],
@@ -76,7 +76,7 @@ const TETROMINOES = [
   {
     id: 7,
     name: "L",
-    color: "#f97316",
+    color: "bg-orange-400",
     shape: [
       [0, 0, 1, 0],
       [1, 1, 1, 0],
@@ -87,13 +87,14 @@ const TETROMINOES = [
 ];
 
 const CELL_COLORS = {
-  1: "rgb(78, 8, 175)",
-  2: "rgb(175, 12, 88)",
-  3: "#22d3ee",
-  4: "#22c55e",
-  5: "#facc15",
-  6: "#3b82f6",
-  7: "#f97316",
+  0: "bg-board-900",
+  1: "bg-cyan-400",
+  2: "bg-yellow-400",
+  3: "bg-purple-400",
+  4: "bg-emerald-400",
+  5: "bg-red-400",
+  6: "bg-blue-400",
+  7: "bg-orange-400",
 };
 
 const SCORE_TABLE = [0, 100, 300, 500, 800];
@@ -436,9 +437,9 @@ export default function App() {
     <div className="min-h-screen bg-gradient-to-r from-[#0a0014] via-[#2a0650] to-[#0a0014] px-4 py-10 text-slate-100">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 lg:flex-row lg:items-start">
         <div className="flex-1 text-center">
-          <h1 className="text-4xl uppercase tracking-wide text-white">Brick Drop</h1>
+          <h1 className="text-4xl uppercase tracking-wide text-orange-400">Brick Drop</h1>
           <p className="mt-4 text-sm text-slate-300">
-            <span className="block pb-6">Classic Tetris.</span>
+            <span className="block pb-6">Classic Tetris</span>
             <span className="block pb-10 pt-10">
               Use arrows to move,
               <br />
@@ -450,23 +451,31 @@ export default function App() {
             </span>
           </p>
 
-          <div className="mt-8 inline-flex items-center gap-3 rounded-full border border-violet-400 bg-violet-500/10 px-4 py-2 text-xs uppercase tracking-widest">
-            <span className="text-violet-200">Status</span>
-            <span className="font-semibold text-white">{statusLabel}</span>
+          <div className="mt-8 text-xs uppercase tracking-widest text-slate-300">
+            Status:{" "}
+            <span
+              className={`font-semibold ${
+                status === "gameover" ? "text-orange-400" : "text-white"
+              }`}
+            >
+              {statusLabel}
+            </span>
           </div>
 
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
             <button
               type="button"
               onClick={startGame}
-              className="rounded-full bg-orange-400 px-5 py-2 text-xs font-semibold uppercase tracking-widest text-slate-950 transition hover:-translate-y-0.5 hover:bg-orange-300"
+              className={`rounded-full border border-violet-400 bg-orange-400 px-5 py-2 text-xs font-semibold uppercase tracking-widest transition hover:-translate-y-0.5 hover:bg-orange-300 ${
+                status === "gameover" ? "text-[#0a0014]" : "text-slate-950"
+              }`}
             >
               {status === "gameover" ? "Restart" : "Start"}
             </button>
             <button
               type="button"
               onClick={togglePause}
-              className="rounded-full border border-violet-400 px-5 py-2 text-xs font-semibold uppercase tracking-widest text-violet-100 transition hover:-translate-y-0.5 hover:border-violet-300 hover:text-white"
+              className="rounded-full border border-violet-400 px-5 py-2 text-xs font-semibold uppercase tracking-widest text-orange-400 transition hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-400/20 hover:text-orange-300"
               disabled={status !== "running" && status !== "paused"}
             >
               {status === "paused" ? "Resume" : "Pause"}
@@ -486,10 +495,7 @@ export default function App() {
                 return (
                   <div
                     key={`${rowIndex}-${colIndex}`}
-                    className={`h-7 w-7 rounded-sm border border-orange-400/70 ${
-                      cell === 0 ? "bg-board-900" : ""
-                    }`}
-                    style={cell === 0 ? undefined : { backgroundColor: CELL_COLORS[cell] }}
+                    className={`h-7 w-7 rounded-sm border border-orange-400/70 ${CELL_COLORS[cell]}`}
                   >
                     {isGhost ? (
                       <div className="h-full w-full rounded-sm border border-white/40 bg-white/10" />
@@ -505,7 +511,7 @@ export default function App() {
           <div className="rounded-2xl border border-violet-400 bg-board-800 p-4 flex flex-col items-center">
             <p className="text-xs uppercase tracking-widest text-slate-400">Next</p>
             <div
-              className="mt-4 inline-grid gap-1 rounded-xl bg-board-900 p-2"
+              className="mt-4 inline-grid gap-1 rounded-xl bg-board-900 p-2 mb-5"
               style={{
                 gridTemplateColumns: `repeat(${nextPreviewDims.cols}, minmax(0, 1fr))`,
               }}
@@ -530,13 +536,8 @@ export default function App() {
                         <div
                           key={`${row}-${col}`}
                           className={`h-5 w-5 rounded-sm border border-orange-400/70 ${
-                            filled && nextPiece ? "" : "bg-board-900"
+                            filled && nextPiece ? CELL_COLORS[nextPiece.id] : "bg-board-900"
                           }`}
-                          style={
-                            filled && nextPiece
-                              ? { backgroundColor: CELL_COLORS[nextPiece.id] }
-                              : undefined
-                          }
                         />
                     );
                   })
@@ -548,14 +549,16 @@ export default function App() {
             <p className="text-xs uppercase tracking-widest text-slate-400">
               <span className="block pb-6">Stats</span>
             </p>
-            <div className="grid grid-cols-2 gap-3 text-sm text-slate-200">
+            <div className="grid grid-cols-2 gap-3 pb-5 text-sm text-slate-200">
               <div>
                 <p className="text-xs uppercase tracking-widest text-slate-400">Score</p>
                 <p className="mt-1 font-display text-2xl text-white">{score}</p>
               </div>
               <div>
                 <p className="text-xs uppercase tracking-widest text-slate-400">Board</p>
-                <p className="mt-1 text-sm text-slate-200">{COLS} x {ROWS}</p>
+                <p className="mt-1 font-display text-2xl text-white">
+                  {COLS} x {ROWS}
+                </p>
               </div>
               <div>
                 <p className="text-xs uppercase tracking-widest text-slate-400">Level</p>
