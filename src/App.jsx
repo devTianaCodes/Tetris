@@ -10,7 +10,7 @@ const TETROMINOES = [
   {
     id: 1,
     name: "I",
-    color: "bg-cyan-400",
+    color: "rgb(78, 8, 175)",
     shape: [
       [0, 0, 0, 0],
       [1, 1, 1, 1],
@@ -21,7 +21,7 @@ const TETROMINOES = [
   {
     id: 2,
     name: "O",
-    color: "bg-yellow-400",
+    color: "rgb(175, 12, 88)",
     shape: [
       [0, 1, 1, 0],
       [0, 1, 1, 0],
@@ -32,7 +32,7 @@ const TETROMINOES = [
   {
     id: 3,
     name: "T",
-    color: "bg-purple-400",
+    color: "#22d3ee",
     shape: [
       [0, 1, 0, 0],
       [1, 1, 1, 0],
@@ -43,7 +43,7 @@ const TETROMINOES = [
   {
     id: 4,
     name: "S",
-    color: "bg-emerald-400",
+    color: "#22c55e",
     shape: [
       [0, 1, 1, 0],
       [1, 1, 0, 0],
@@ -54,7 +54,7 @@ const TETROMINOES = [
   {
     id: 5,
     name: "Z",
-    color: "bg-red-400",
+    color: "#facc15",
     shape: [
       [1, 1, 0, 0],
       [0, 1, 1, 0],
@@ -65,7 +65,7 @@ const TETROMINOES = [
   {
     id: 6,
     name: "J",
-    color: "bg-blue-400",
+    color: "#3b82f6",
     shape: [
       [1, 0, 0, 0],
       [1, 1, 1, 0],
@@ -76,7 +76,7 @@ const TETROMINOES = [
   {
     id: 7,
     name: "L",
-    color: "bg-orange-400",
+    color: "#f97316",
     shape: [
       [0, 0, 1, 0],
       [1, 1, 1, 0],
@@ -87,14 +87,13 @@ const TETROMINOES = [
 ];
 
 const CELL_COLORS = {
-  0: "bg-board-900",
-  1: "bg-cyan-400",
-  2: "bg-yellow-400",
-  3: "bg-purple-400",
-  4: "bg-emerald-400",
-  5: "bg-red-400",
-  6: "bg-blue-400",
-  7: "bg-orange-400",
+  1: "rgb(78, 8, 175)",
+  2: "rgb(175, 12, 88)",
+  3: "#22d3ee",
+  4: "#22c55e",
+  5: "#facc15",
+  6: "#3b82f6",
+  7: "#f97316",
 };
 
 const SCORE_TABLE = [0, 100, 300, 500, 800];
@@ -434,10 +433,10 @@ export default function App() {
   }, [nextBounds]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#12031f] via-[#1c0730] to-[#0b0016] px-4 py-10 text-slate-100">
+    <div className="min-h-screen bg-gradient-to-r from-[#0a0014] via-[#2a0650] to-[#0a0014] px-4 py-10 text-slate-100">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 lg:flex-row lg:items-start">
         <div className="flex-1 text-center">
-          <h1 className="font-display text-4xl uppercase tracking-wide text-white">Brick Drop</h1>
+          <h1 className="text-4xl uppercase tracking-wide text-white">Brick Drop</h1>
           <p className="mt-4 text-sm text-slate-300">
             <span className="block pb-6">Classic Tetris.</span>
             <span className="block pb-10 pt-10">
@@ -488,8 +487,9 @@ export default function App() {
                   <div
                     key={`${rowIndex}-${colIndex}`}
                     className={`h-7 w-7 rounded-sm border border-orange-400/70 ${
-                      cell === 0 ? "bg-board-900" : CELL_COLORS[cell]
+                      cell === 0 ? "bg-board-900" : ""
                     }`}
+                    style={cell === 0 ? undefined : { backgroundColor: CELL_COLORS[cell] }}
                   >
                     {isGhost ? (
                       <div className="h-full w-full rounded-sm border border-white/40 bg-white/10" />
@@ -527,14 +527,17 @@ export default function App() {
                       shapeCol <= nextBounds.maxCol &&
                       nextPiece?.shape?.[shapeRow]?.[shapeCol];
                     return (
-                      <div
-                        key={`${row}-${col}`}
-                        className={`h-5 w-5 rounded-sm border border-orange-400/70 ${
-                          filled && nextPiece
-                            ? CELL_COLORS[nextPiece.id]
-                            : "bg-board-900"
-                        }`}
-                      />
+                        <div
+                          key={`${row}-${col}`}
+                          className={`h-5 w-5 rounded-sm border border-orange-400/70 ${
+                            filled && nextPiece ? "" : "bg-board-900"
+                          }`}
+                          style={
+                            filled && nextPiece
+                              ? { backgroundColor: CELL_COLORS[nextPiece.id] }
+                              : undefined
+                          }
+                        />
                     );
                   })
                 : null}
