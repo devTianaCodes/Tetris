@@ -180,7 +180,6 @@ export default function App() {
   const [lines, setLines] = useState(0);
   const [level, setLevel] = useState(0);
   const [highScore, setHighScore] = useState(0);
-  const [showHelp, setShowHelp] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
   const [flashingRows, setFlashingRows] = useState([]);
   const intervalRef = useRef(null);
@@ -472,12 +471,14 @@ export default function App() {
   }, [nextBounds]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-[#0a0014] via-[#2a0650] to-[#0a0014] px-4 py-10 text-slate-100">
+    <div className="min-h-screen bg-gradient-to-r from-[#0a0014] via-[#2a0650] to-[#0a0014] px-4 py-4 md:py-10 text-slate-100">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 md:flex-row md:items-start md:gap-8">
-        <div className="order-1 flex-1 text-center pt-1 md:pt-[50px]">
-          <h1 className="text-4xl uppercase tracking-wide text-orange-400">Brick Drop</h1>
-          <p className="mt-2 text-sm text-slate-300 md:mt-4">
-            <span className="block pb-6">Classic Tetris</span>
+        <div className="order-1 flex-1 text-center pt-0 md:pt-[50px]">
+          <h1 className="text-[20px] uppercase tracking-wide text-orange-400 md:text-4xl">
+            Brick Drop
+          </h1>
+          <p className="mt-2 text-xs text-slate-300 md:mt-4 md:text-sm">
+            <span className="hidden pb-6 md:block">Classic Tetris</span>
             <span className="hidden pb-10 pt-10 lg:block">
               Use arrows to move,
               <br />
@@ -489,42 +490,24 @@ export default function App() {
             </span>
           </p>
 
-          <button
-            type="button"
-            onClick={() => setShowHelp((prev) => !prev)}
-            className="mt-2 inline-flex items-center justify-center rounded-full border border-violet-400 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-orange-400 transition hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-400/20 hover:text-orange-300 lg:hidden"
-          >
-            {showHelp ? "Hide Controls" : "Show Controls"}
-          </button>
-
-          {showHelp ? (
-            <p className="mt-2 text-sm text-slate-300 lg:hidden">
-              Use arrows to move,
-              <br />
-              Up or X to rotate,
-              <br />
-              Space for hard drop,
-              <br />
-              and P to pause.
-            </p>
+          {statusLabel !== "Ready" ? (
+            <div className="mt-3 text-[10px] uppercase tracking-widest text-slate-300 md:mt-8 md:text-xs">
+              Status:{" "}
+              <span
+                className={`font-semibold ${
+                  status === "gameover" ? "text-orange-400" : "text-white"
+                }`}
+              >
+                {statusLabel}
+              </span>
+            </div>
           ) : null}
 
-          <div className="mt-4 text-xs uppercase tracking-widest text-slate-300 md:mt-8">
-            Status:{" "}
-            <span
-              className={`font-semibold ${
-                status === "gameover" ? "text-orange-400" : "text-white"
-              }`}
-            >
-              {statusLabel}
-            </span>
-          </div>
-
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-2 md:mt-10 md:gap-4">
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-2 md:mt-10 md:gap-4">
             <button
               type="button"
               onClick={startGame}
-              className={`min-w-[140px] rounded-full border border-violet-400 bg-orange-400 px-5 py-2 text-xs font-semibold uppercase tracking-widest transition hover:-translate-y-0.5 hover:bg-orange-300 ${
+              className={`min-w-[110px] md:min-w-[140px] rounded-full border border-violet-400 bg-orange-400 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest transition hover:-translate-y-0.5 hover:bg-orange-300 md:px-5 md:py-2 md:text-xs ${
                 status === "gameover" ? "text-[#0a0014]" : "text-slate-950"
               }`}
             >
@@ -533,7 +516,7 @@ export default function App() {
             <button
               type="button"
               onClick={togglePause}
-              className="min-w-[140px] rounded-full border border-violet-400 px-5 py-2 text-xs font-semibold uppercase tracking-widest text-orange-400 transition hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-400/20 hover:text-orange-300"
+              className="min-w-[110px] md:min-w-[140px] rounded-full border border-violet-400 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-orange-400 transition hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-400/20 hover:text-orange-300 md:px-5 md:py-2 md:text-xs"
               disabled={status !== "running" && status !== "paused"}
             >
               {status === "paused" ? "Resume" : "Pause"}
@@ -541,9 +524,26 @@ export default function App() {
           </div>
         </div>
 
-        <div className="order-3 flex flex-1 flex-col items-center gap-4 md:order-2 md:flex-none">
+        <div className="order-3 flex flex-1 items-center justify-center gap-2 md:order-2 md:flex-none">
+          <div className="flex flex-col items-center gap-10 md:hidden">
+            <button
+              type="button"
+              onClick={() => moveHorizontally(-1)}
+              className="h-10 w-16 rounded-full border border-violet-400 text-[10px] font-semibold uppercase tracking-widest text-orange-400"
+            >
+              Left
+            </button>
+            <button
+              type="button"
+              onClick={hardDrop}
+              className="h-10 w-16 rounded-full border border-violet-400 text-[10px] font-semibold uppercase tracking-widest text-orange-400"
+            >
+              Drop
+            </button>
+          </div>
+
           <div
-            className="grid gap-1 rounded-2xl border border-violet-400 bg-board-900 p-2 shadow-2xl overflow-visible shrink-0"
+            className="grid gap-0.5 rounded-2xl border border-violet-400 bg-board-900 p-1 shadow-2xl overflow-visible shrink-0 md:gap-1 md:p-2"
             style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))` }}
           >
             {displayBoard.map((row, rowIndex) =>
@@ -554,7 +554,7 @@ export default function App() {
                 return (
                   <div
                     key={`${rowIndex}-${colIndex}`}
-                    className={`relative h-7 w-7 rounded-sm border border-orange-400/70 ${
+                    className={`relative h-4 w-4 rounded-sm border border-orange-400/70 md:h-7 md:w-7 ${
                       CELL_COLORS[cell]
                     } ${isFlashing ? "animate-pulse brightness-200" : ""}`}
                   >
@@ -566,13 +566,30 @@ export default function App() {
               })
             )}
           </div>
+
+          <div className="flex flex-col items-center gap-10 md:hidden">
+            <button
+              type="button"
+              onClick={() => moveHorizontally(1)}
+              className="h-10 w-16 rounded-full border border-violet-400 text-[10px] font-semibold uppercase tracking-widest text-orange-400"
+            >
+              Right
+            </button>
+            <button
+              type="button"
+              onClick={rotate}
+              className="h-10 w-16 rounded-full border border-violet-400 text-[10px] font-semibold uppercase tracking-widest text-orange-400"
+            >
+              Rotate
+            </button>
+          </div>
         </div>
 
-        <div className="order-2 mx-auto flex w-full max-w-none flex-row gap-2 pt-3 md:order-3 md:ml-5 md:mx-0 md:max-w-xs md:flex-col md:gap-4 md:pt-[50px]">
-          <div className="w-1/2 rounded-2xl border border-violet-400 bg-board-800 p-2 flex flex-col items-center md:w-auto md:p-4">
+        <div className="order-2 mx-auto flex w-full max-w-none flex-row gap-1 pt-1 md:order-3 md:ml-5 md:mx-0 md:max-w-xs md:flex-col md:gap-4 md:pt-[50px]">
+          <div className="w-1/2 rounded-xl border border-violet-400 bg-board-800 p-1 flex flex-col items-center md:w-auto md:p-4 md:rounded-2xl">
             <p className="text-xs uppercase tracking-widest text-slate-400">Next</p>
             <div
-              className="mt-4 inline-grid gap-1 rounded-xl bg-board-900 p-2 mb-5"
+              className="mt-1 inline-grid gap-0.5 rounded-lg bg-board-900 p-1 mb-2 md:mt-4 md:gap-1 md:p-2 md:mb-5 md:rounded-xl"
               style={{
                 gridTemplateColumns: `repeat(${nextPreviewDims.cols}, minmax(0, 1fr))`,
               }}
@@ -596,7 +613,7 @@ export default function App() {
                     return (
                         <div
                           key={`${row}-${col}`}
-                          className={`h-5 w-5 rounded-sm border border-orange-400/70 ${
+                          className={`h-3.5 w-3.5 rounded-[3px] border border-orange-400/70 md:h-5 md:w-5 md:rounded-sm ${
                             filled && nextPiece ? CELL_COLORS[nextPiece.id] : "bg-board-900"
                           }`}
                         />
@@ -606,11 +623,11 @@ export default function App() {
             </div>
           </div>
 
-          <div className="w-1/2 rounded-2xl border border-violet-400 bg-board-800 p-2 text-center md:w-auto md:p-4">
+          <div className="w-1/2 rounded-xl border border-violet-400 bg-board-800 p-1 text-center md:w-auto md:p-4 md:rounded-2xl">
             <p className="text-xs uppercase tracking-widest text-slate-400">
-              <span className="block pb-6">Stats</span>
+              <span className="block pb-1 md:pb-6">Stats</span>
             </p>
-            <div className="grid grid-cols-2 gap-2 pb-2 text-sm text-slate-200 md:gap-3 md:pb-5">
+            <div className="grid grid-cols-2 gap-1 pb-1 text-[10px] text-slate-200 md:gap-3 md:pb-5 md:text-sm">
               <div>
                 <p className="text-xs uppercase tracking-widest text-slate-400">Score</p>
                 <p className="mt-1 text-xs text-white md:font-display md:text-2xl">{score}</p>
