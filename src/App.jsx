@@ -174,6 +174,7 @@ const shuffle = (items) => {
 export default function App() {
   const [board, setBoard] = useState(() => emptyBoard());
   const [active, setActive] = useState(() => randomPiece());
+  const [nextPiece, setNextPiece] = useState(() => randomPiece());
   const [status, setStatus] = useState("idle");
   const [score, setScore] = useState(0);
   const [lines, setLines] = useState(0);
@@ -212,6 +213,7 @@ export default function App() {
     const freshBoard = emptyBoard();
     refillBag();
     const firstPiece = drawFromBag();
+    const upcoming = drawFromBag();
     setBoard(freshBoard);
     setScore(0);
     setLines(0);
@@ -221,6 +223,7 @@ export default function App() {
       return;
     }
     setActive(firstPiece);
+    setNextPiece(upcoming);
     setStatus("running");
   };
 
@@ -243,12 +246,14 @@ export default function App() {
       });
     }
 
-    const upcoming = drawFromBag();
+    const upcoming = nextPiece ?? drawFromBag();
+    const newNext = drawFromBag();
     if (!canPlace(clearedBoard, upcoming.shape, upcoming.x, upcoming.y)) {
       setStatus("gameover");
       return;
     }
     setActive(upcoming);
+    setNextPiece(newNext);
   };
 
   const stepDown = () => {
@@ -390,6 +395,32 @@ export default function App() {
     return cells;
   }, [ghostPiece]);
 
+  const nextBounds = useMemo(() => {
+    if (!nextPiece) return null;
+    let minRow = 4;
+    let maxRow = -1;
+    let minCol = 4;
+    let maxCol = -1;
+    nextPiece.shape.forEach((row, rowIndex) => {
+      row.forEach((cell, colIndex) => {
+        if (!cell) return;
+        minRow = Math.min(minRow, rowIndex);
+        maxRow = Math.max(maxRow, rowIndex);
+        minCol = Math.min(minCol, colIndex);
+        maxCol = Math.max(maxCol, colIndex);
+      });
+    });
+    if (maxRow === -1 || maxCol === -1) return null;
+    return {
+      minRow,
+      maxRow,
+      minCol,
+      maxCol,
+      rows: maxRow - minRow + 1,
+      cols: maxCol - minCol + 1,
+    };
+  }, [nextPiece]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#12031f] via-[#1c0730] to-[#0b0016] px-4 py-10 text-slate-100">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 lg:flex-row lg:items-start">
@@ -451,6 +482,41 @@ export default function App() {
         </div>
 
         <div className="w-full max-w-xs space-y-4">
+          <div className="rounded-2xl border border-violet-400/60 bg-board-800 p-4">
+            <p className="text-xs uppercase tracking-widest text-slate-400">Next</p>
+            <div
+              className="mt-4 inline-grid gap-1 rounded-xl bg-board-900 p-2"
+              style={{
+                gridTemplateColumns: nextBounds
+                  ? `repeat(${nextBounds.cols}, minmax(0, 1fr))`
+                  : "repeat(4, minmax(0, 1fr))",
+              }}
+            >
+              {nextBounds
+                ? Array.from({ length: nextBounds.rows * nextBounds.cols }).map(
+                    (_, index) => {
+                      const row = Math.floor(index / nextBounds.cols);
+                      const col = index % nextBounds.cols;
+                      const filled =
+                        nextPiece?.shape?.[row + nextBounds.minRow]?.[
+                          col + nextBounds.minCol
+                        ];
+                      return (
+                        <div
+                          key={`${row}-${col}`}
+                          className={`h-5 w-5 rounded-sm border border-orange-400/70 ${
+                            filled && nextPiece
+                              ? CELL_COLORS[nextPiece.id]
+                              : "bg-board-900"
+                          }`}
+                        />
+                      );
+                    }
+                  )
+                : null}
+            </div>
+          </div>
+
           <div className="rounded-2xl border border-violet-400/60 bg-board-800 p-4">
             <p className="text-xs uppercase tracking-widest text-slate-400">
               <span className="block pb-6">Stats</span>
