@@ -159,6 +159,7 @@ const clearLines = (board) => {
 
 const createPieceFromTemplate = (template) => ({
   id: template.id,
+  name: template.name,
   color: template.color,
   shape: template.shape.map((row) => [...row]),
   x: Math.floor((COLS - 4) / 2),
@@ -194,6 +195,8 @@ export default function App() {
   const [flashingRows, setFlashingRows] = useState([]);
   const intervalRef = useRef(null);
   const clearTimeoutRef = useRef(null);
+  const horizontalHoldTimeoutRef = useRef(null);
+  const horizontalHoldIntervalRef = useRef(null);
   const bagRef = useRef([]);
 
   const ghostPiece = useMemo(() => {
@@ -222,10 +225,19 @@ export default function App() {
     return createPieceFromTemplate(template);
   };
 
+  const drawOpeningPiece = () => {
+    let piece = drawFromBag();
+    while (piece.name === "S" || piece.name === "Z") {
+      bagRef.current.unshift(TETROMINOES.find((item) => item.id === piece.id));
+      piece = drawFromBag();
+    }
+    return piece;
+  };
+
   const startGame = () => {
     const freshBoard = emptyBoard();
     refillBag();
-    const firstPiece = drawFromBag();
+    const firstPiece = drawOpeningPiece();
     const upcoming = drawFromBag();
     setBoard(freshBoard);
     setScore(0);
@@ -321,11 +333,35 @@ export default function App() {
   };
 
   const moveHorizontally = (direction) => {
-    if (!active) return;
-    const nextX = active.x + direction;
-    if (canPlace(board, active.shape, nextX, active.y)) {
-      setActive((prev) => ({ ...prev, x: nextX }));
+    setActive((prev) => {
+      if (!prev) return prev;
+      const nextX = prev.x + direction;
+      if (!canPlace(board, prev.shape, nextX, prev.y)) return prev;
+      return { ...prev, x: nextX };
+    });
+  };
+
+  const stopHorizontalHold = () => {
+    if (horizontalHoldTimeoutRef.current) {
+      clearTimeout(horizontalHoldTimeoutRef.current);
+      horizontalHoldTimeoutRef.current = null;
     }
+    if (horizontalHoldIntervalRef.current) {
+      clearInterval(horizontalHoldIntervalRef.current);
+      horizontalHoldIntervalRef.current = null;
+    }
+  };
+
+  const startHorizontalHold = (direction, event) => {
+    event?.preventDefault();
+    if (status !== "running" || isClearing) return;
+    stopHorizontalHold();
+    moveHorizontally(direction);
+    horizontalHoldTimeoutRef.current = setTimeout(() => {
+      horizontalHoldIntervalRef.current = setInterval(() => {
+        moveHorizontally(direction);
+      }, 65);
+    }, 140);
   };
 
   const rotate = () => {
@@ -416,8 +452,15 @@ export default function App() {
       if (clearTimeoutRef.current) {
         clearTimeout(clearTimeoutRef.current);
       }
+      stopHorizontalHold();
     };
   }, []);
+
+  useEffect(() => {
+    if (status !== "running" || isClearing) {
+      stopHorizontalHold();
+    }
+  }, [status, isClearing]);
   
   useEffect(() => {
     const stored = window.localStorage.getItem("BrickDrop_high_score");
@@ -569,7 +612,10 @@ export default function App() {
             <div className="grid min-w-0 grid-cols-3 grid-rows-2 justify-items-center gap-[clamp(0.45rem,1.4dvh,0.75rem)]">
               <button
                 type="button"
-                onClick={() => moveHorizontally(-1)}
+                onPointerDown={(event) => startHorizontalHold(-1, event)}
+                onPointerUp={stopHorizontalHold}
+                onPointerLeave={stopHorizontalHold}
+                onPointerCancel={stopHorizontalHold}
                 disabled={status !== "running" || isClearing}
                 className="mobile-control-button flex h-[clamp(2.75rem,8dvh,4rem)] w-[clamp(2.75rem,8dvh,4rem)] items-center justify-center rounded-2xl text-3xl font-black text-slate-950 transition-transform"
               >
@@ -585,7 +631,10 @@ export default function App() {
               </button>
               <button
                 type="button"
-                onClick={() => moveHorizontally(1)}
+                onPointerDown={(event) => startHorizontalHold(1, event)}
+                onPointerUp={stopHorizontalHold}
+                onPointerLeave={stopHorizontalHold}
+                onPointerCancel={stopHorizontalHold}
                 disabled={status !== "running" || isClearing}
                 className="mobile-control-button col-start-3 flex h-[clamp(2.75rem,8dvh,4rem)] w-[clamp(2.75rem,8dvh,4rem)] items-center justify-center rounded-2xl text-3xl font-black text-slate-950 transition-transform"
               >
