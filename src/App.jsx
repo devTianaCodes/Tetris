@@ -481,8 +481,116 @@ export default function App() {
   }, [nextBounds]);
 
   return (
-    <div className="relative flex h-screen min-h-screen items-center overflow-hidden bg-gradient-to-br from-[#05000d] via-[#1b0a3d] to-[#060012] px-3 py-3 text-slate-100 md:px-6 md:py-0">
-      <div className="mx-auto flex h-full w-full max-w-7xl flex-col justify-center gap-3 md:grid md:grid-cols-[minmax(210px,1fr)_auto_minmax(260px,1fr)] md:items-center md:gap-10">
+    <div className="relative flex h-[100dvh] min-h-[100dvh] items-center overflow-hidden bg-gradient-to-br from-[#05000d] via-[#1b0a3d] to-[#060012] text-slate-100 md:h-screen md:min-h-screen md:px-6">
+      <div className="flex h-full w-full flex-col md:hidden">
+        <section className="flex h-[60dvh] min-h-0 items-center justify-center px-4 pb-3 pt-[max(3rem,calc(env(safe-area-inset-top)+2.5rem))]">
+          <div className="relative shrink-0 overflow-hidden rounded-2xl">
+            <div
+              className="grid gap-0.5 rounded-2xl border border-violet-400/70 bg-black/40 p-1.5 shadow-[0_0_38px_rgba(92,60,160,0.48)]"
+              style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))` }}
+            >
+              {displayBoard.map((row, rowIndex) =>
+                row.map((cell, colIndex) => {
+                  const isGhost =
+                    cell === 0 && ghostCells.has(`${rowIndex}-${colIndex}`);
+                  const isFlashing =
+                    flashingRows.includes(rowIndex) && cell !== 0;
+                  return (
+                    <div
+                      key={`mobile-${rowIndex}-${colIndex}`}
+                      className={`relative aspect-square w-[min(calc((60dvh-6.5rem)/20),calc((100vw-3rem)/10))] rounded-sm ${
+                        cell === 0
+                          ? "bg-black/40 border border-white/5 shadow-[0_0_8px_rgba(255,255,255,0.06)]"
+                          : `${CELL_COLORS[cell]} border border-black/20`
+                      } ${isFlashing ? "animate-pulse brightness-200" : ""}`}
+                      style={
+                        cell === 0
+                          ? undefined
+                          : {
+                              boxShadow: `0 0 10px ${CELL_GLOW[cell]}, 0 0 20px ${CELL_GLOW[cell]}`,
+                            }
+                      }
+                    >
+                      {isGhost ? (
+                        <div className="h-full w-full rounded-sm border border-white/40 bg-white/10" />
+                      ) : null}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {status === "gameover" ? (
+              <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-black/50 px-3 text-center backdrop-blur-[2px]">
+                <div>
+                  <p className="font-display text-4xl font-semibold uppercase leading-none text-orange-300 drop-shadow-[0_0_18px_rgba(249,115,22,0.85)]">
+                    Game
+                  </p>
+                  <p className="font-display text-4xl font-semibold uppercase leading-none text-white drop-shadow-[0_0_18px_rgba(255,255,255,0.45)]">
+                    Over
+                  </p>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </section>
+
+        <section className="flex h-[40dvh] min-h-0 flex-col justify-center bg-black/10 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[clamp(1.1rem,3dvh,2rem)]">
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={togglePause}
+              disabled={status !== "running" && status !== "paused"}
+              className={`mobile-control-button ${status === "paused" ? "mobile-control-resume" : "mobile-control-pause"} h-[clamp(2.25rem,5.5dvh,2.75rem)] min-w-28 rounded-full px-4 text-[11px] font-black uppercase tracking-widest text-white transition-transform`}
+            >
+              <span className="mr-2 text-sm">Ⅱ</span>
+              {status === "paused" ? "Resume" : "Pause"}
+            </button>
+          </div>
+
+          <div className="grid min-h-0 flex-1 grid-cols-[1.1fr_0.9fr] items-center gap-4">
+            <div className="grid grid-cols-3 grid-rows-2 gap-[clamp(0.45rem,1.7dvh,0.9rem)]">
+              <button
+                type="button"
+                onClick={() => moveHorizontally(-1)}
+                disabled={status !== "running" || isClearing}
+                className="mobile-control-button flex h-[clamp(2.9rem,9dvh,4.75rem)] w-full items-center justify-center rounded-2xl text-3xl font-black text-slate-950 transition-transform"
+              >
+                ←
+              </button>
+              <button
+                type="button"
+                onClick={hardDrop}
+                disabled={status !== "running" || isClearing}
+                className="mobile-control-button col-start-2 row-start-2 flex h-[clamp(2.9rem,9dvh,4.75rem)] w-full items-center justify-center rounded-2xl text-3xl font-black text-slate-950 transition-transform"
+              >
+                ↓
+              </button>
+              <button
+                type="button"
+                onClick={() => moveHorizontally(1)}
+                disabled={status !== "running" || isClearing}
+                className="mobile-control-button col-start-3 flex h-[clamp(2.9rem,9dvh,4.75rem)] w-full items-center justify-center rounded-2xl text-3xl font-black text-slate-950 transition-transform"
+              >
+                →
+              </button>
+            </div>
+
+            <div className="grid grid-rows-2 gap-[clamp(0.45rem,1.7dvh,0.9rem)]">
+              <button
+                type="button"
+                onClick={rotate}
+                disabled={status !== "running" || isClearing}
+                className="mobile-control-button flex h-[clamp(2.9rem,9dvh,4.75rem)] w-full items-center justify-center rounded-2xl text-3xl font-black text-slate-950 transition-transform"
+              >
+                ↻
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div className="mx-auto hidden h-full w-full max-w-7xl justify-center gap-3 md:grid md:grid-cols-[minmax(210px,1fr)_auto_minmax(260px,1fr)] md:items-center md:gap-10">
         <div className="order-1 flex-1 text-center md:flex md:flex-none md:flex-col md:items-center md:justify-center">
           <h1 className="text-2xl uppercase tracking-wide text-orange-400 md:text-5xl">
             Brick Drop
